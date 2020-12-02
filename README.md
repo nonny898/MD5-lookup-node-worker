@@ -28,54 +28,142 @@ The frameworks and libraries used in this project are:
 
 ### :page_facing_up: Prerequisites
 
-Firstly, you will need [Common Password List ( rockyou.txt )](https://www.kaggle.com/wjburns/common-password-list-rockyoutxt) file that contains **14,341,564 unique** passwords, used in **32,603,388 accounts**. This file was taken from the following location: /usr/share/wordlists/rockyou.txt.gz from Kali Linux operating system. Kali Linux provides some password dictionary files as part of its standard installation.
+1. You will need [Common Password List ( rockyou.txt )](https://www.kaggle.com/wjburns/common-password-list-rockyoutxt) file that contains **14,341,564 unique** passwords, used in **32,603,388 accounts**. This file was taken from the following location: /usr/share/wordlists/rockyou.txt.gz from Kali Linux operating system. Kali Linux provides some password dictionary files as part of its standard installation.
 
-**Disclosure:** Kali Linux is an open source project that is maintained and funded by Offensive Security, a provider of world-class information security training and penetration testing services.
+	**Disclosure:** Kali Linux is an open source project that is maintained and funded by Offensive Security, a provider of world-class information security training and penetration testing services.
 
-Secondly, you will need to have Node.js install in you system. If not, you can download the framework from [here](https://nodejs.org/en/download/)
+2. You will need to have **Node.js** install in you system. If you haven't yet, you can download the framework from [here](https://nodejs.org/en/download/).  To verify Node.js installation:
+```sh
+node-v
+```
+The terminal should display the Node.js version.
 
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+3. To create our dictionary file (hash and password in the same line), I've implement a **Jupyter notebook** to do this. I recommend installing [Anaconda | Individual Edition](https://www.anaconda.com/products/individual) to your system to get the latest Python version. If you do not want to install anything into your system, there are multiple Jupyter notebook available online such as [Google Colab](https://colab.research.google.com/). Once you have the notebook running, input the following code in download and install pandas library:
+```python
+!pip install pandas
+```
+We do this to be sure that your notebook have pandas installed.
 
-### Installation
+### :pencil2: Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+ 1. Clone the repo
    ```sh
-   git clone https://github.com/your_username_/Project-Name.git
+   git clone https://github.com/nonny898/opl-project.git
    ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```JS
-   const API_KEY = 'ENTER YOUR API';
-   ```
-
+   
 <!-- USAGE EXAMPLES -->
-## Usage
+## :computer: Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+1. Navigate to `create-hashlist` folder 
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+2. 
+	 * If you're running the notebook on your system, place the `rockyou.txt` in the same directory as `create_hash_text.ipynb` file.  
+
+	 * If you're using an an online Jupyter notebook, import the `create_hash_text.ipynb` and upload the `rockyou.txt` file to the notebook file system.
+ 
+3. Run the notebook. This will create a text file called `hashed.txt`.
+
+4. Move and paste the `hashed.txt` inside the directory `md5-crack-lookup`.
+
+5. Navigate the `md5-crack-lookup` folder.
+
+6. In the terminal, type in either:
+
+	* `node single-thread.js` for single thread lookup 
+	* `node multi-thread.js` for parallel lookup.
+
+8. You can change the hash to crack inside both the `single-thread.js` and `multi-thread.js` file where the variable name:
+
+```javascript
+const passToCrack = "" //some MD5 password hash
+```
 
 <!-- CONTRIBUTING -->
-## Contributing
+## :chart_with_upwards_trend: Result
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+The test was conducted on:
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+```sh
+CPU = AMD Ryzen 5 2600X Six-Core Processor 
+	  Base speed: 3.60 GHz
+      Cores: 6
+	  Logical processors: 12
+RAM = 16.0 GB
+      Speed: 2400 MHz
+	  Form factor: DIMM
+```
+
+### :arrow_right: Single Thread
+
+| MD5 Hash | Plain text | Test 1 | Test 2 | Test 3 | Test 4 | Test 5 | Average |
+| ------- |:----------:| ------:|:------:| ------:| ------:| ------:| -------:|
+|  |  |  |
+|  |  |  |
+|  |  |  |
+
+### :twisted_rightwards_arrows: Multiple Threads
+
+| MD5 Hash | Plain text | Test 1 | Test 2 | Test 3 | Test 4 | Test 5 | Average |
+| ------- |:----------:| ------:|:------:| ------:| ------:| ------:| -------:|
+|  |  |  |
+|  |  |  |
+|  |  |  |
+
+<!-- EXPLANATION -->
+## :microscope: Explanation
+
+### :construction_worker: The Workers
+
+We are using the node build-in module called **Worker threads**. This module will enable the use of threads that execute Javascript in parallel using multiple CPU cores.
+
+For single thread test, we will still use the `worker_threads` module, but we will be setting the number of workers to have only one workers
+
+```javascript
+const  numWorkers  =  1
+```
+
+We still use module to ensure that they will have the same environment in both cases.
+
+For multi threads test, we will be setting the number of workers to have 8 workers. This is because in total we have 12 threads, but there will be some threads running in the backgrounds e.g. for the operating system. We can spawn more workers, but some of the workers will have to wait in a queue for other threads to finish up. 
+
+All created workers will put in a list.
+
+```javascript
+const  numWorkers  =  8
+```
+
+### :bookmark_tabs: The Lookup Procedure
+
+For **single thread** environment, the worker will have to through all 14,343,472 lines in the `hashed.txt` file to look for hash and it's plain text.
+
+For **multi thread** environment, each worker will be **given 100 lines** to look for the hash. This means that at the one time, we will looking up 800 lines concurrently. 
+
+* If one worker found the hash and it's plain text, we will **terminate** those other workers.
+
+* If one worker finishes looking up in the given lines and still haven't found the hash, it will be given the next 100 lines after the 700 lines given to the other workers.
+
+The number lines given to each workers can be change in `multi-thread.js`:
+
+```javascript
+const startingPoint = {0: 0,
+					   1: 100,
+					   2: 200,
+					   3: 300,
+					   4: 400,
+					   5: 500,
+					   6: 600,
+					   7: 700}
+```
+
+Each key representing the worker ID and the value is the number of lines given to those workers. For simplicity, we have chosen the number of lines to have the same interval. Otherwise, it will more complicated to tell the program how many lines to skip.
+
+
+
+<!-- EVALUATION -->
+## :balance_scale: Evalution
+
 
 <!-- CONTACT -->
-## Contact
+## :envelope_with_arrow: Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
-
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
+Atichard Chintakanond - a.chintakanond@gmail.com
