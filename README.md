@@ -85,12 +85,12 @@ The test was conducted on:
 
 ```sh
 CPU = AMD Ryzen 5 2600X Six-Core Processor 
-	  Base speed: 3.60 GHz
+      Base speed: 3.60 GHz
       Cores: 6
-	  Logical processors: 12
+      Logical processors: 12
 RAM = 16.0 GB
       Speed: 2400 MHz
-	  Form factor: DIMM
+      Form factor: DIMM
 ```
 
 ### :arrow_right: Single Thread
@@ -114,7 +114,7 @@ RAM = 16.0 GB
 
 ### :construction_worker: The Workers
 
-We are using the node build-in module called **Worker threads**. This module will enable the use of threads that execute Javascript in parallel using multiple CPU cores.
+We are using the node build-in module called [**Worker threads**](https://nodejs.org/api/worker_threads.html). This module will enable the use of threads that execute Javascript in parallel using multiple CPU cores.
 
 For single thread test, we will still use the `worker_threads` module, but we will be setting the number of workers to have only one workers
 
@@ -146,21 +146,48 @@ The number lines given to each workers can be change in `multi-thread.js`:
 
 ```javascript
 const startingPoint = {0: 0,
-					   1: 100,
-					   2: 200,
-					   3: 300,
-					   4: 400,
-					   5: 500,
-					   6: 600,
-					   7: 700}
+                       1: 100,
+                       2: 200,
+                       3: 300,
+                       4: 400,
+                       5: 500,
+                       6: 600,
+                       7: 700}
 ```
 
-Each key representing the worker ID and the value is the number of lines given to those workers. For simplicity, we have chosen the number of lines to have the same interval. Otherwise, it will more complicated to tell the program how many lines to skip.
+Each key representing the **worker ID** and the value is the **number of lines** given to those workers. For simplicity, we have chosen the number of lines to have the same interval. Otherwise, it will more complicated to tell the program how many lines to skip.
 
+If you were to change the number of lines for each worker, you'll to change `m` and `n` of this part of the `multi-thread-lookup.js` file:
 
+```javascript
+while ((head + m) < workerData.hashedListSize+1) { // m = number of lines for each worker
+	const newArray = workerData.hashList.slice(head,head+100).map((password) => {
+		if (password.split(" ")[0] === workerData.passToCrack) passwordFound = password.split(" ")[1]
+		return password.split(" ")[0] === workerData.passToCrack
+	})
+	if (newArray.includes(true)) { return {found: true, password: passwordFound, t1: performance.now()}}
+	else {
+		head += n // n = total number of lines of all workers
+	}
+}
+```
+
+If the has is in the dictionary, the terminal will display `Found password: ` with the password in plain text. Otherwise, the terminal will display: `Not in database`
+
+### :straight_ruler: Benchmarking
+
+We used a module called [**Performance measurement APIs**](https://nodejs.org/api/perf_hooks.html) which is a build-in module in Node.js for measuring performance. The function used to measure is `performance.now()` where it returns the current high resolution millisecond timestamp. We will call this function two times:
+
+1. In the main thread, just before spawning the first worker.
+2. In the worker thread if one of them were to find the equivalent plain text.
 
 <!-- EVALUATION -->
 ## :balance_scale: Evalution
+
+>Workers (threads) are useful for performing CPU-intensive JavaScript operations. 
+>They will not help much with I/O-intensive work. 
+>Node.js’s built-in asynchronous I/O operations are more efficient than Workers can be.
+
 
 
 <!-- CONTACT -->
