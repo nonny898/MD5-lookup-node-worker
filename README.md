@@ -2,12 +2,12 @@
 
 ## :smiley: Introduction
 
-This project was created for a course called Functional and Parallel Programming. The purpose of this project is to explore the parallel side of Javascript. The project will be focusing on the speed in looking up MD5 hash **(without salting)** for the equivalent password. 
+This project was created for a course called Functional and Parallel Programming. The purpose of this project is to explore the parallel side of Javascript. The project will be focusing on the speed in looking up MD5 hash **(without salting)** for the equivalent password.
 
 Brute forcing a de-convert a MD5 hash can be very time consuming and limited amount of characters **if someone were to see the result quickly**.
 
 Here's why:
-* You'll have to go through every combination of **alphanumerical:** 
+* You'll have to go through every combination of **alphanumerical:**
 	* (0-9, lowercase, uppercase, **symbols** such as @ # * and &)
 * The more characters you have the more combinations you'll have to go through.
 	* Adding a single character to a password boosts its security exponentially.
@@ -16,10 +16,11 @@ This project will use the concept of a **rainbow table attack** - a type of hack
 
 ### :hammer: Built With
 
-The frameworks and libraries used in this project are: 
+The frameworks and libraries used in this project are:
 * [pandas - Python Data Analysis Library (pydata.org)](https://pandas.pydata.org/)
 * [hashlib - Secure hashes and message digests](https://docs.python.org/3/library/hashlib.html)
 * [Node.js - a JavaScript runtime built on Chrome's V8 JavaScript engine](https://nodejs.org/en/)
+* [n-readlines - npm](https://www.npmjs.com/package/n-readlines)
 
 
 
@@ -48,31 +49,45 @@ We do this to be sure that your notebook have pandas installed.
 
  1. Clone the repo
    ```sh
-   git clone https://github.com/nonny898/opl-project.git
+   git clone https://github.com/nonny898/MD5-lookup-node-worker.git
    ```
-   
+
+ 2. Install `n-readlines` module inside `md5-crack-lookup` folder:
+```sh
+cd md5-crack-lookup; npm install
+```
+
+
 <!-- USAGE EXAMPLES -->
 ## :computer: Usage
 
-1. Navigate to `create-hashlist` folder 
-
-2. 
-	 * If you're running the notebook on your system, place the `rockyou.txt` in the same directory as `create_hash_text.ipynb` file.  
+1. Navigate to `create-hashlist` folder:
+```sh
+cd create-hashlist
+```
+2.
+	 * If you're running the notebook on your system, place the `rockyou.txt` in the same directory as `create_hash_text.ipynb` file.
 
 	 * If you're using an an online Jupyter notebook, import the `create_hash_text.ipynb` and upload the `rockyou.txt` file to the notebook file system.
- 
+
 3. Run the notebook. This will create a text file called `hashed.txt`.
 
-4. Move and paste the `hashed.txt` inside the directory `md5-crack-lookup`.
+4. Move and paste the `hashed.txt` inside the directory `md5-crack-lookup`:
+```sh
+mv hashed.txt ../md5-crack-lookup
+```
 
-5. Navigate the `md5-crack-lookup` folder.
+5. Navigate the `md5-crack-lookup` folder:
+```sh
+cd md5-crack-lookup
+```
 
-6. In the terminal, type in either:
+7. In the terminal, type in:
+```sh
+node index.js
+```
 
-	* `node single-thread.js` for single thread lookup 
-	* `node multi-thread.js` for parallel lookup.
-
-8. You can change the hash to crack inside both the `single-thread.js` and `multi-thread.js` file where the variable name:
+8. You can change the hash to crack inside the `index.js` file where the variable name:
 
 ```javascript
 const passToCrack = "" //some MD5 password hash
@@ -84,7 +99,7 @@ const passToCrack = "" //some MD5 password hash
 The test was conducted on:
 
 ```sh
-CPU = AMD Ryzen 5 2600X Six-Core Processor 
+CPU = AMD Ryzen 5 2600X Six-Core Processor
       Base speed: 3.60 GHz
       Cores: 6
       Logical processors: 12
@@ -92,103 +107,152 @@ RAM = 16.0 GB
       Speed: 2400 MHz
       Form factor: DIMM
 ```
+List of hashed used in this experiment:
+ 1. ad849a20dc8677403d4789595bd66877 = "4353492801"
+ 2. 2bc827ab00ea0175b6020e09de2ce98a = "gamapa2"
+ 3. b7474e70aa5d730490afaf4afc081d1c = "90019079"
+ 4. 0a23dfb1d5f5c1df5d260f69577255f2 = "push69pop"
+ 5. bf3ed3388451da8df8bf96086a360dc4 = "dalepedal"
 
-### :arrow_right: Single Thread
-
-| MD5 Hash | Plain text | Test 1 | Test 2 | Test 3 | Test 4 | Test 5 | Average |
-| ------- |:----------:| ------:|:------:| ------:| ------:| ------:| -------:|
-|  |  |  |
-|  |  |  |
-|  |  |  |
-
-### :twisted_rightwards_arrows: Multiple Threads
-
-| MD5 Hash | Plain text | Test 1 | Test 2 | Test 3 | Test 4 | Test 5 | Average |
-| ------- |:----------:| ------:|:------:| ------:| ------:| ------:| -------:|
-|  |  |  |
-|  |  |  |
-|  |  |  |
+| Type of Lookup | Hash 1 | Hash 2 | Hash 3 | Hash 4 | Hash 5 | Average |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| :arrow_right: Single Thread | 18.6s | 18.5s | 18.6s | 18.5s | 18.7s | **18.58s**
+| :twisted_rightwards_arrows: Multiple Threads | 2.8s | 3.2s | 3.4s | 2.9s | 2.9s | **3.04s**
 
 <!-- EXPLANATION -->
 ## :microscope: Explanation
+
+### :mag: The Read File
+
+We create a file called `getHash.js` dedicating to reading the `hashed.txt` file.
+
+```javascript
+const getHash = function() {
+	const liner = new lineByLine('hashed.txt');
+	const lines = [];
+	let counter = 0
+	while (line = liner.next()) {
+		lines.push(line.toString())
+		counter++
+	}
+	return {lines, counter}
+}
+```
 
 ### :construction_worker: The Workers
 
 We are using the node build-in module called [**Worker threads**](https://nodejs.org/api/worker_threads.html). This module will enable the use of threads that execute Javascript in parallel using multiple CPU cores.
 
+The number of threads we are spawning will be the input of the function:
+
+```javascript
+splitHash(n) // n = number of workers we want
+```
+
 For single thread test, we will still use the `worker_threads` module, but we will be setting the number of workers to have only one workers
 
 ```javascript
-const  numWorkers  =  1
+splitHash(1)
 ```
 
-We still use module to ensure that they will have the same environment in both cases.
+We still use the module to ensure that they will have the same environment in both cases.
 
-For multi threads test, we will be setting the number of workers to have 8 workers. This is because in total we have 12 threads, but there will be some threads running in the backgrounds e.g. for the operating system. We can spawn more workers, but some of the workers will have to wait in a queue for other threads to finish up. 
-
-All created workers will put in a list.
+For multi threads test, we will be setting the number of workers to have 8 workers. This is because in total we have 12 threads, but there will be some threads running in the backgrounds e.g. for the operating system. We can spawn more workers, but some of the workers will have to wait in a queue for other threads to finish up.
 
 ```javascript
-const  numWorkers  =  8
+splitHash(8)
 ```
+
+All created workers will put in a promise:
+
+```javascript
+const createWorker = (arrayToFind,i) => {
+	return new Promise((resolve, reject) => {
+		const worker = new Worker('./lookup.js', { workerData: {
+			workerId: i,
+			arrayToFind,
+			passToCrack,
+		}});
+		worker.on("message", resolve);
+		worker.on("error", reject);
+	});
+};
+```
+This ensures that when we call `Promise.all(promises)` where promises where array of worker we create with the above function, all worker will be spawning and working at the same time.
 
 ### :bookmark_tabs: The Lookup Procedure
 
-For **single thread** environment, the worker will have to through all 14,343,472 lines in the `hashed.txt` file to look for hash and it's plain text.
-
-For **multi thread** environment, each worker will be **given 100 lines** to look for the hash. This means that at the one time, we will looking up 800 lines concurrently. 
-
-* If one worker found the hash and it's plain text, we will **terminate** those other workers.
-
-* If one worker finishes looking up in the given lines and still haven't found the hash, it will be given the next 100 lines after the 700 lines given to the other workers.
-
-The number lines given to each workers can be change in `multi-thread.js`:
+We create a function `crack(workerData)` in the `lookup.js` that takes in an object we passed during the `createWorker` function above.
 
 ```javascript
-const startingPoint = {0: 0,
-                       1: 100,
-                       2: 200,
-                       3: 300,
-                       4: 400,
-                       5: 500,
-                       6: 600,
-                       7: 700}
-```
-
-Each key representing the **worker ID** and the value is the **number of lines** given to those workers. For simplicity, we have chosen the number of lines to have the same interval. Otherwise, it will more complicated to tell the program how many lines to skip.
-
-If you were to change the number of lines for each worker, you'll to change `m` and `n` of this part of the `multi-thread-lookup.js` file:
-
-```javascript
-while ((head + m) < workerData.hashedListSize+1) { // m = number of lines for each worker
-	const newArray = workerData.hashList.slice(head,head+100).map((password) => {
+function crack(workerData) {
+	console.log(`Start looking from thread number ${workerData.workerId}`)
+	const newArray = workerData.arrayToFind.map((password) => {
 		if (password.split(" ")[0] === workerData.passToCrack) passwordFound = password.split(" ")[1]
-		return password.split(" ")[0] === workerData.passToCrack
+		return password.split(" ")[0] ===  workerData.passToCrack
 	})
-	if (newArray.includes(true)) { return {found: true, password: passwordFound, t1: performance.now()}}
-	else {
-		head += n // n = total number of lines of all workers
-	}
+	if (newArray.includes(true)) { return {found: true, password: passwordFound, end: performance.now()}}
+	else {return {found: false, password: "Not in database."}}
 }
 ```
 
-If the has is in the dictionary, the terminal will display `Found password: ` with the password in plain text. Otherwise, the terminal will display: `Not in database`
+We are using the native Javascript `.map()` function to create a new array with either true or false value depending on whether each element (lines) contains the hash we are looking for or not.
+
+### :scissors: The Split-up
+
+We are splitting up the hash list into chunks according to the number to workers we have:
+
+```javascript
+const segmentsPerWorker = Math.round(hashedListSize  /  workers);
+```
+This will determine **how many lines** each worker has look through (except for the last worker).
+
+For **single thread** environment, the worker will have to map all lines.
+
+For **multi thread** environment, each worker will be **given number of lines** depending on how many workers we are spawning to look for the hash.
+```javascript
+if (index === 0) { // index = worker number
+	// the first segment
+	arrayToFind = hashList.slice(0, segmentsPerWorker);
+} else  if (index === workers - 1) {
+	// the last segment
+	arrayToFind = hashList.slice(segmentsPerWorker * index);
+} else {
+	// intermediate segments
+	arrayToFind = hashList.slice(segmentsPerWorker * index,segmentsPerWorker * (index + 1))
+```
+For the last worker, it will be given the lines from `segmentsPerWorker * index` till the end of the list. The amount of lines could be either **smaller or bigger or equal** to other workers.
+
+If the hash is in the dictionary, the terminal will display:
+```sh
+Password = (some password plain text).
+Found in (time it takes to look for the password)
+```
+Otherwise, the terminal will display:
+```sh
+Password = Not in database.
+Found in (time it takes to look through all the lines)
+```
 
 ### :straight_ruler: Benchmarking
 
 We used a module called [**Performance measurement APIs**](https://nodejs.org/api/perf_hooks.html) which is a build-in module in Node.js for measuring performance. The function used to measure is `performance.now()` where it returns the current high resolution millisecond timestamp. We will call this function two times:
 
 1. In the main thread, just before spawning the first worker.
-2. In the worker thread if one of them were to find the equivalent plain text.
+2. In the worker thread when each worker finishes.
+
+Because reading the whole `hashed.txt` file takes the longest time, we are not taking to account of the time taken to read the file.
 
 <!-- EVALUATION -->
 ## :balance_scale: Evalution
 
->Workers (threads) are useful for performing CPU-intensive JavaScript operations. 
->They will not help much with I/O-intensive work. 
+>Workers (threads) are useful for performing CPU-intensive JavaScript operations.
+>They will not help much with I/O-intensive work.
 >Node.js’s built-in asynchronous I/O operations are more efficient than Workers can be.
 
+From the words of the documentation itself, I/O operation should not be dealt with workers. Furthermore, the bottleneck of this project purely caused by reading a huge file into the memory. At first we made a mistake with using Node `readFileSync()` function which will read the whole file into the memory and return a buffer. However, when we tried to produce a list from this buffer using `toString().split('\r\n')`, the string was too long for Node to handle. This is why we result to use the external module instead.
 
+On the contrary, we have found significant improve in looking up with parallelism and the use of worker threads. Therefore, making this project to be successfully showing the advantage of using parallel programing.
 
 <!-- CONTACT -->
 ## :envelope_with_arrow: Contact

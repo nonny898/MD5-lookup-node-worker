@@ -1,51 +1,65 @@
-const { Worker, isMainThread } = require('worker_threads');
+const { Worker } = require('worker_threads');
 const { performance } = require('perf_hooks');
-const fs = require('fs');
-const hashList = fs.readFileSync('hashed.txt').toString().split("\r\n");
+const { getHash } = require('./getHash')
 
-const numWorkers = 8 // NOTE: can't set this to be more than 8 without fixing the way numbers are carried
-const workers = []
-const hashedListSize = 14343472
-const startingPoint = {
-  0: 0,
-  1: 100,
-  2: 200,
-  3: 300,
-  4: 400,
-  5: 500,
-  6: 600,
-  7: 700,
-}
+const fromText = getHash()
+const hashList = fromText.lines
+const hashedListSize = fromText.counter
+const passToCrack = "ad849a20dc8677403d4789595bd66877"
 
-if(isMainThread) {
-  var t0 = performance.now()
-  for (var i = 0; i < numWorkers; i++) {
+const createWorker = (arrayToFind,i) => {
+  return new Promise((resolve, reject) => {
     const worker = new Worker('./lookup.js', { workerData: {
       workerId: i,
-      startingPoint: startingPoint[i],
-      hashList,
-      hashedListSize,
-      passToCrack: "01c4c3d0bad89532e188d94265e36a71",
+      arrayToFind,
+      passToCrack,
     }});
-    workers.push(worker)
-    // run thread and pass info
-    worker.on('message', (result) => {
-      if (result.found){
-        const t1 = result.t1
-        console.log("Call to doSomething took " + (t1 - t0) + " milliseconds.")
-        console.log(`Found password: ${result.password}`)
-        workers.forEach(function(worker) {
-          worker.terminate()
-        })
+    worker.on("message", resolve);
+    worker.on("error", reject);
+  });
+};
+
+async function splitHash(workers) {
+  const segmentsPerWorker = Math.round(hashedListSize / workers);
+  const promises = Array(workers).fill().map((_,index) => {
+      let arrayToFind;
+      if (index === 0) {
+        // the first segment
+        arrayToFind = hashList.slice(0, segmentsPerWorker);
+      } else if (index === workers - 1) {
+        // the last segment
+        arrayToFind = hashList.slice(segmentsPerWorker * index);
       } else {
-        console.log(result.head)
+        // intermediate segments
+        arrayToFind = hashList.slice(segmentsPerWorker * index,segmentsPerWorker * (index + 1))
       }
-    });
-    worker.on('exit', (code) => {
-      if (code !== 0)
-      console.log('Worker stopped ' + code);
-      else
-      console.log('Worker stopped ' + code);
-    });
+      return createWorker(arrayToFind,index)
+  });
+  const segmentsResults = await Promise.all(promises);
+  const getWorkerIfFound = segmentsResults.filter(result => result.found === true)
+  if (getWorkerIfFound.length < 1) {
+    return segmentsResults[workers - 1]
+  } else {
+    return getWorkerIfFound[0];
   }
 }
+
+async function run() {
+
+  // lookup with one workers
+  // const start1 = performance.now();
+  // const result1 = await splitHash(1);
+  // console.log(
+  //   `Password = ${result1[0].password.split('\r')[0]} found in ${result1[0].end - start1}ms`
+  // );
+
+  // lookup with multiple workers
+  const start3 = performance.now();
+  const result3 = await splitHash(8);
+  console.log(
+    `Password = ${result3.password.split('\r')[0]}\nFound in ${result3.end - start3}ms.`
+  );
+  console.log("\nDone");
+}
+
+run();
